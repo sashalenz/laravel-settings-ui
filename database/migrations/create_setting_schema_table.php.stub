@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * A DERIVED projection of the code declarations. Not a source of truth.
+ *
+ * It exists for one reason: Wiretables requires an Eloquent builder, and a
+ * schema that lives in PHP classes has no rows to query. Nothing else reads
+ * it — value resolution goes declaration → store and never touches this table,
+ * so a stale projection can misdraw a navigation list but can never change a
+ * resolved config() value.
+ *
+ * Rebuilt wholesale by `settings:sync`. Truncating it loses nothing.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('setting_schema', function (Blueprint $table): void {
+            $table->id();
+            $table->string('path', 191)->unique();
+            $table->string('root', 64)->index();
+            $table->string('parent_path', 191)->nullable()->index();
+            $table->boolean('is_group')->default(false);
+            $table->unsignedTinyInteger('depth')->default(0);
+            $table->string('type', 32)->nullable();
+            $table->string('store', 32)->nullable();
+            $table->string('label_key', 191)->nullable();
+            $table->string('icon', 64)->nullable();
+            $table->boolean('is_secret')->default(false);
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->unsignedInteger('field_count')->default(0);
+            $table->string('source', 191)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('setting_schema');
+    }
+};

@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('setting_changes', function (Blueprint $table): void {
+            $table->id();
+            $table->string('path', 191)->index();
+            // Null for a redacted row: a secret's value is never stored, so the
+            // audit records that it changed, by whom and when — nothing more.
+            $table->json('old_value')->nullable();
+            $table->json('new_value')->nullable();
+            $table->boolean('redacted')->default(false);
+            // ui | console | api | import | revert — console writes were
+            // invisible in the setup this replaces.
+            $table->string('source', 32)->default('ui');
+            $table->nullableMorphs('causer');
+            $table->timestamp('created_at')->nullable()->index();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('setting_changes');
+    }
+};

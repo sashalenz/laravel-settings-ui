@@ -1,0 +1,79 @@
+{
+    "name": "sashalenz/laravel-settings-ui",
+    "description": "Declarative, nestable runtime settings for Laravel — fluent schema, pluggable stores, secure secrets, resilient cache, config() overlay and bundled admin UI.",
+    "keywords": [
+        "laravel",
+        "settings",
+        "configuration",
+        "livewire",
+        "secrets",
+        "cache"
+    ],
+    "homepage": "https://github.com/sashalenz/laravel-settings-ui",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sasha Lenz",
+            "email": "sasha@sashalenz.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.3|^8.4|^8.5",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/contracts": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/validation": "^11.0|^12.0|^13.0",
+        "livewire/livewire": "^3.5|^4.0",
+        "spatie/laravel-package-tools": "^1.16|^1.17|^1.93"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "nunomaduro/collision": "^8.0",
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+        "phpstan/phpstan": "^2.0"
+    },
+    "suggest": {
+        "spatie/laravel-activitylog": "Bind ActivitylogRecorder to mirror setting changes into an existing activity log.",
+        "aws/aws-sdk-php": "Required to use AwsSecretsManagerDriver.",
+        "google/cloud-secret-manager": "Required to use GcpSecretManagerDriver."
+    },
+    "autoload": {
+        "psr-4": {
+            "SashaLenz\\SettingsUi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SashaLenz\\SettingsUi\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SashaLenz\\SettingsUi\\SettingsServiceProvider"
+            ],
+            "aliases": {
+                "Settings": "SashaLenz\\SettingsUi\\Facades\\Settings"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

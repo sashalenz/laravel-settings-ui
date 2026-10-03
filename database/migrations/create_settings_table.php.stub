@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Operator values only.
+ *
+ * Everything else about a setting — its type, label, rules, ordering, secrecy
+ * and place in the tree — lives in the code declaration. This table is the one
+ * piece of settings state that cannot be rebuilt from source, which is exactly
+ * why it holds nothing else.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('settings', function (Blueprint $table): void {
+            $table->id();
+            $table->string('path', 191)->unique();
+            // Root segment, denormalised so a group's values load with one
+            // indexed lookup instead of a LIKE scan on every boot.
+            $table->string('group', 64)->index();
+            $table->json('value')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('settings');
+    }
+};
