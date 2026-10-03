@@ -30,6 +30,9 @@ class SettingsGroupForm extends Component
     /** @var array<string, mixed> Keyed by relative field path */
     public array $data = [];
 
+    /** @var array{data: array<string, mixed>} Backward-compatible alias for form.data consumers */
+    public array $form = ['data' => []];
+
     public function mount(string $group): void
     {
         $this->group = $group;
@@ -45,6 +48,8 @@ class SettingsGroupForm extends Component
                 $field->field->secret ? null : $this->resolver()->get($field->path),
             );
         }
+
+        $this->form['data'] = $this->data;
     }
 
     public function render(): View
@@ -128,6 +133,11 @@ class SettingsGroupForm extends Component
         abort_unless($this->authorizer()->canManage(auth()->user(), $this->resolvedGroup()), 403);
 
         $this->validate();
+
+        // Merge form.data into data if set
+        if (! empty($this->form['data'])) {
+            $this->data = array_replace_recursive($this->data, $this->form['data']);
+        }
 
         $resolver = $this->resolver();
         $recorder = app(ChangeRecorder::class);

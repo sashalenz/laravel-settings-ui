@@ -210,6 +210,11 @@ class SettingsServiceProvider extends PackageServiceProvider
     private function registerLivewireComponents(): void
     {
         if (class_exists(Livewire::class)) {
+            Livewire::component('settings-group-form', Http\Livewire\SettingsGroupForm::class);
+            Livewire::component('settings-table', Http\Livewire\SettingsTable::class);
+            Livewire::component('settings-history-table', Http\Livewire\SettingsHistoryTable::class);
+            Livewire::component('settings-schema-table', Http\Livewire\SettingSchemaTable::class);
+
             Livewire::component('settings::group-form', Http\Livewire\SettingsGroupForm::class);
             Livewire::component('settings::table', Http\Livewire\SettingsTable::class);
             Livewire::component('settings::history-table', Http\Livewire\SettingsHistoryTable::class);

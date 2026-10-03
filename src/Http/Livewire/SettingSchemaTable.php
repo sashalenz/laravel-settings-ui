@@ -28,7 +28,7 @@ class SettingSchemaTable extends Component
     public function render(): View
     {
         $query = SettingSchemaRow::query()
-            ->where('kind', 'field')
+            ->fields()
             ->orderBy('path');
 
         if ($this->search !== '') {

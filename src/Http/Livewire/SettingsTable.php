@@ -25,8 +25,8 @@ class SettingsTable extends Component
     public function render(): View
     {
         $query = SettingSchemaRow::query()
-            ->where('kind', 'root')
-            ->orderBy('order')
+            ->roots()
+            ->orderBy('sort_order')
             ->orderBy('label_key');
 
         if ($this->search !== '') {
