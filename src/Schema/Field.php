@@ -355,4 +355,9 @@ final class Field
 
         return false;
     }
+
+    public function isNullable(): bool
+    {
+        return ! $this->isRequired();
+    }
 }

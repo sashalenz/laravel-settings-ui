@@ -86,7 +86,7 @@
             id="{{ $wireModel }}"
             class="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
         >
-            @if ($field->nullable)
+            @if ($field->isNullable())
                 <option value="">-- {{ __('Select...') }} --</option>
             @endif
             @foreach ($field->options as $optVal => $optLabel)

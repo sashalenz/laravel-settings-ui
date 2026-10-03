@@ -15,7 +15,7 @@
         <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
             @forelse ($rows as $row)
                 <li>
-                    <a href="{{ route('settings.edit', ['group' => $row->path]) }}" class="block hover:bg-gray-50 dark:hover:bg-gray-700/50 px-4 py-4 sm:px-6 transition duration-150 ease-in-out">
+                    <a href="{{ SashaLenz\SettingsUi\Support\Routes::group($row->path) }}" class="block hover:bg-gray-50 dark:hover:bg-gray-700/50 px-4 py-4 sm:px-6 transition duration-150 ease-in-out">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-3">
                                 <span class="text-lg">📁</span>
