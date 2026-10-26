@@ -178,6 +178,8 @@ final class DeclarationPrinter
             FieldType::Date => "Field::date({$key})",
             FieldType::Datetime => "Field::datetime({$key})",
             FieldType::Phone => "Field::phone({$key})",
+            FieldType::List => "Field::list({$key})",
+            FieldType::Repeater => "Field::repeater({$key})",
             FieldType::KeyValue => "Field::keyValue({$key})",
             FieldType::Model => sprintf('Field::model(%s, %s)', $key, $model ?? "''"),
             FieldType::Tree => sprintf('Field::tree(%s, %s)', $key, $model ?? "''"),

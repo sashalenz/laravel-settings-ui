@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SashaLenz\SettingsUi\Schema;
 
 use Closure;
+use InvalidArgumentException;
 use SashaLenz\SettingsUi\Exceptions\InvalidPathException;
 
 /**
@@ -66,6 +67,15 @@ final class Field
 
     public private(set) ?string $deprecated = null;
 
+    /** @var list<Field> */
+    public private(set) array $schema = [];
+
+    public private(set) ?int $minItems = null;
+
+    public private(set) ?int $maxItems = null;
+
+    public private(set) ?string $itemLabel = null;
+
     private function __construct(string $key, string $type)
     {
         if (preg_match('/^[a-z][a-z0-9_-]*$/', $key) !== 1) {
@@ -74,6 +84,9 @@ final class Field
 
         $this->key = $key;
         $this->type = $type;
+        if ($this->isCollection()) {
+            $this->default = [];
+        }
     }
 
     // ---------------------------------------------------------------- makers
@@ -157,6 +170,98 @@ final class Field
         return self::make($key, $type);
     }
 
+    public static function list(string $key): self
+    {
+        return self::make($key, FieldType::List);
+    }
+
+    public static function repeater(string $key): self
+    {
+        return self::make($key, FieldType::Repeater);
+    }
+
+    /** @param list<Field> $fields */
+    public function schema(array $fields): self
+    {
+        if ($this->type !== FieldType::Repeater->value) {
+            throw new InvalidArgumentException('Only repeaters accept a schema.');
+        }
+        $keys = [];
+        foreach ($fields as $field) {
+            if ($field->secret || $field->isCollection() || in_array($field->key, $keys, true)) {
+                throw new InvalidArgumentException('Repeater children must be unique, non-secret scalar fields.');
+            }
+            $keys[] = $field->key;
+        }
+        $this->schema = array_values($fields);
+
+        return $this;
+    }
+
+    public function minItems(int $count): self
+    {
+        if (! $this->isCollection() || $count < 0 || ($this->maxItems !== null && $count > $this->maxItems)) {
+            throw new InvalidArgumentException('Invalid minimum item count.');
+        }
+        $this->minItems = $count;
+
+        return $this;
+    }
+
+    public function maxItems(int $count): self
+    {
+        if (! $this->isCollection() || $count < 0 || ($this->minItems !== null && $count < $this->minItems)) {
+            throw new InvalidArgumentException('Invalid maximum item count.');
+        }
+        $this->maxItems = $count;
+
+        return $this;
+    }
+
+    /** Optional literal/translation label used with the row number. */
+    public function itemLabel(string $label): self
+    {
+        $this->itemLabel = $label;
+
+        return $this;
+    }
+
+    public function isCollection(): bool
+    {
+        return in_array($this->type, [FieldType::List->value, FieldType::Repeater->value], true);
+    }
+
+    /** @return array<string, list<string>> */
+    public function validationRules(string $path): array
+    {
+        $rules = [$path => $this->ruleList()];
+        if ($this->type === FieldType::List->value) {
+            $rules[$path.'.*'] = ['present', 'string'];
+        } elseif ($this->type === FieldType::Repeater->value) {
+            $rules[$path.'.*'] = ['array:'.implode(',', array_map(fn (self $field): string => $field->key, $this->schema))];
+            foreach ($this->schema as $field) {
+                if ($field->secret) {
+                    throw new InvalidArgumentException('Repeater children cannot be secret.');
+                }
+                $rules += $field->validationRules($path.'.*.'.$field->key);
+            }
+        }
+
+        return $rules;
+    }
+
+    public function normalize(mixed $value): mixed
+    {
+        if (! $this->isCollection()) {
+            return $value;
+        }
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        return is_array($value) ? array_values($value) : [];
+    }
+
     // -------------------------------------------------------------- builders
 
     /** Translation key; used literally when it does not resolve. */
@@ -188,7 +293,10 @@ final class Field
      */
     public function default(mixed $default): self
     {
-        $this->default = $default;
+        if ($this->isCollection() && ! is_array($default)) {
+            throw new InvalidArgumentException('Collection defaults must be arrays.');
+        }
+        $this->default = $this->normalize($default);
 
         return $this;
     }
@@ -214,6 +322,9 @@ final class Field
      */
     public function secret(): self
     {
+        if ($this->isCollection()) {
+            throw new InvalidArgumentException('List and repeater fields cannot be secret.');
+        }
         $this->secret = true;
 
         return $this;
@@ -329,20 +440,27 @@ final class Field
     /** @return list<string> */
     public function ruleList(): array
     {
-        if ($this->rules === null) {
-            return ['nullable'];
-        }
 
         $rules = is_array($this->rules)
             ? $this->rules
-            : explode('|', $this->rules);
+            : explode('|', $this->rules ?? '');
 
         $rules = array_values(array_filter(
             array_map(static fn (string $rule): string => trim($rule), $rules),
             static fn (string $rule): bool => $rule !== '',
         ));
 
-        return $rules === [] ? ['nullable'] : $rules;
+        if ($this->isCollection()) {
+            $rules[] = 'array';
+            if ($this->minItems !== null) {
+                $rules[] = 'min:'.$this->minItems;
+            }
+            if ($this->maxItems !== null) {
+                $rules[] = 'max:'.$this->maxItems;
+            }
+        }
+
+        return $rules === [] ? ['nullable'] : array_values(array_unique($rules));
     }
 
     public function isRequired(): bool

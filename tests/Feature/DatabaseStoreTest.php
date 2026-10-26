@@ -132,3 +132,15 @@ it('picks up a change made by another process on refresh', function (): void {
 
     expect(config('selling.workdays'))->toBe(9);
 });
+
+it('stores normalized collections as JSON arrays and overlays arrays', function (): void {
+    declareSettings(Group::make('site')->fields([
+        Field::list('tags'), Field::repeater('links')->schema([Field::text('label')]),
+    ]));
+    app(Resolver::class)->put('site.tags', [4 => 'news', 9 => 'events']);
+    app(Resolver::class)->put('site.links', [3 => ['label' => 'Home']]);
+    app(Overlay::class)->flushAndApply();
+    expect(DB::table('settings')->where('path', 'site.tags')->value('value'))->toBe('["news","events"]')
+        ->and(config('site.tags'))->toBe(['news', 'events'])
+        ->and(config('site.links'))->toBe([['label' => 'Home']]);
+});

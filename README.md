@@ -209,3 +209,37 @@ composer analyse
 ## 📄 License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+### Lists and repeaters
+
+Use a list for strings, or a repeater for objects with declared child fields:
+
+```php
+Field::list('tags')->default(['news'])->minItems(1)->maxItems(10)->itemLabel('Tag'),
+
+Field::repeater('links')
+    ->schema([
+        Field::text('label')->rules('required|string|max:100'),
+        Field::text('url')->rules('required|url'),
+    ])
+    ->default([['label' => 'Home', 'url' => 'https://example.com']])
+    ->minItems(1)->maxItems(5)->itemLabel('Link'),
+```
+
+Both default to an empty array. The UI offers add, remove, move up, and move down
+controls. `itemLabel()` accepts a literal or translation key followed by the row
+number. Child defaults initialize new repeater rows. Schemas contain unique,
+non-secret scalar fields; nested collections are not supported.
+
+Collection rules include `array` and the configured item limits. Lists validate
+each `data.path.*` as a string; repeater child rules use `data.path.*.child`.
+Use `rules()` on a collection for additional array-level constraints. Empty
+lists are allowed unless a minimum or required rule is declared.
+
+Values persist as JSON arrays through the existing database/file stores and
+remain PHP arrays in the config overlay. Removing or moving rows reindexes the
+array. Collection defaults must be arrays. `secret()`, `encrypted()`, and
+external secret bindings are not allowed on lists/repeaters.
+
+The Livewire form actions `addRow($path)`, `removeRow($path, $index)`, and
+`moveRow($path, $from, $to)` accept paths relative to the group (without `data.`).

@@ -66,6 +66,12 @@ final class TypeCaster
             // A key-value field stores a JSON object. It arrives decoded, but a
             // hand-edited database row can leave a string behind — coerce it so
             // consumers can rely on `array` without defensive checks.
+            FieldType::List, FieldType::Repeater => array_values(match (true) {
+                is_array($raw) => $raw,
+                is_string($raw) => (array) (json_decode($raw, true) ?: []),
+                default => [],
+            }),
+
             FieldType::KeyValue => match (true) {
                 is_array($raw) => $raw,
                 is_string($raw) => (array) (json_decode($raw, true) ?: []),

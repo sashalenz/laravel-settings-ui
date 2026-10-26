@@ -65,3 +65,35 @@ it('carries a custom type name through untouched', function (): void {
     expect($field->type)->toBe('colour_picker')
         ->and($field->fieldType())->toBeNull();
 });
+
+it('builds collection schemas with array defaults and nested rules', function (): void {
+    $field = Field::repeater('links')->schema([Field::text('url')->rules('required|url')])
+        ->minItems(1)->maxItems(3)->itemLabel('Link');
+    expect($field->default)->toBe([])
+        ->and($field->itemLabel)->toBe('Link')
+        ->and($field->validationRules('data.links'))->toBe([
+            'data.links' => ['array', 'min:1', 'max:3'],
+            'data.links.*' => ['array:url'],
+            'data.links.*.url' => ['required', 'url'],
+        ])
+        ->and(Field::list('tags')->validationRules('data.tags'))->toBe([
+            'data.tags' => ['array'], 'data.tags.*' => ['present', 'string'],
+        ]);
+});
+
+it('normalizes sparse collection arrays and JSON', function (): void {
+    expect(Field::list('tags')->normalize([2 => 'a', 8 => 'b']))->toBe(['a', 'b'])
+        ->and(Field::repeater('rows')->normalize('[{"label":"a"}]'))->toBe([['label' => 'a']])
+        ->and(Field::list('tags')->default([3 => 'a'])->default)->toBe(['a']);
+});
+
+it('rejects secret collections', function (string $type, string $method): void {
+    expect(fn () => Field::$type('items')->$method())->toThrow(InvalidArgumentException::class);
+})->with(['list', 'repeater'])->with(['secret', 'encrypted']);
+
+it('rejects invalid collection schemas and bounds', function (): void {
+    expect(fn () => Field::list('tags')->default('bad'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => Field::list('tags')->minItems(3)->maxItems(1))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => Field::repeater('rows')->schema([Field::text('token')->secret()]))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => Field::repeater('rows')->schema([Field::text('a'), Field::text('a')]))->toThrow(InvalidArgumentException::class);
+});

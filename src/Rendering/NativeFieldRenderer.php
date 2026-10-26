@@ -37,7 +37,7 @@ final class NativeFieldRenderer implements FieldRendererInterface
             return ($this->custom[$type])($resolved, $wireModel, $currentValue);
         }
 
-        return View::make('settings::fields.default', [
+        return View::make($resolved->field->isCollection() ? 'settings::fields.collection' : 'settings::fields.default', [
             'resolved' => $resolved,
             'wireModel' => $wireModel,
             'currentValue' => $currentValue,

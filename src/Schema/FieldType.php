@@ -30,6 +30,8 @@ enum FieldType: string
     case Date = 'date';
     case Datetime = 'datetime';
     case Phone = 'phone';
+    case List = 'list';
+    case Repeater = 'repeater';
     case KeyValue = 'key_value';
 
     /** Types that require `options` to be non-empty. */
