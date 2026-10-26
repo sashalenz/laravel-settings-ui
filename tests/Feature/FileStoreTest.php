@@ -80,3 +80,15 @@ it('lists orphans', function (): void {
 
     expect($store->orphans(['selling.kept']))->toBe(['selling.gone']);
 });
+
+it('persists normalized lists and repeater objects in the JSON file', function (): void {
+    declareSettings(Group::make('site')->fields([
+        Field::list('tags'), Field::repeater('links')->schema([Field::text('label')]),
+    ]));
+    app(Resolver::class)->put('site.tags', [4 => 'news']);
+    app(Resolver::class)->put('site.links', [3 => ['label' => 'Home']]);
+    app(Overlay::class)->flushAndApply();
+    expect(json_decode((string) file_get_contents($this->file), true))->toBe([
+        'site.links' => [['label' => 'Home']], 'site.tags' => ['news'],
+    ])->and(config('site.links'))->toBe([['label' => 'Home']]);
+});

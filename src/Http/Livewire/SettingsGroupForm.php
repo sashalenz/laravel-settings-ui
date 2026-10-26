@@ -14,6 +14,7 @@ use SashaLenz\SettingsUi\Contracts\FieldRendererInterface;
 use SashaLenz\SettingsUi\Contracts\SettingsAuthorizer;
 use SashaLenz\SettingsUi\History\ChangeRecorder;
 use SashaLenz\SettingsUi\Resolution\Resolver;
+use SashaLenz\SettingsUi\Schema\Field;
 use SashaLenz\SettingsUi\Schema\ResolvedField;
 use SashaLenz\SettingsUi\Schema\ResolvedGroup;
 use SashaLenz\SettingsUi\SettingsManager;
@@ -29,9 +30,6 @@ class SettingsGroupForm extends Component
 
     /** @var array<string, mixed> Keyed by relative field path */
     public array $data = [];
-
-    /** @var array{data: array<string, mixed>} Backward-compatible alias for form.data consumers */
-    public array $form = ['data' => []];
 
     public function mount(string $group): void
     {
@@ -49,7 +47,6 @@ class SettingsGroupForm extends Component
             );
         }
 
-        $this->form['data'] = $this->data;
     }
 
     public function render(): View
@@ -120,9 +117,10 @@ class SettingsGroupForm extends Component
         $rules = [];
 
         foreach ($this->fieldsInOrder() as $field) {
-            $rules['data.'.$field->relativePath()] = $field->field->secret
-                ? ['nullable', 'string']
-                : $field->field->ruleList();
+            $path = 'data.'.$field->relativePath();
+            $rules += $field->field->secret
+                ? [$path => ['nullable', 'string']]
+                : $field->field->validationRules($path);
         }
 
         return $rules;
@@ -134,18 +132,14 @@ class SettingsGroupForm extends Component
 
         $this->validate();
 
-        // Merge form.data into data if set
-        if (! empty($this->form['data'])) {
-            $this->data = array_replace_recursive($this->data, $this->form['data']);
-        }
-
         $resolver = $this->resolver();
         $recorder = app(ChangeRecorder::class);
         $changes = [];
 
         DB::transaction(function () use ($resolver, &$changes): void {
             foreach ($this->fieldsInOrder() as $field) {
-                $submitted = Arr::get($this->data, $field->relativePath());
+                $submitted = $field->field->normalize(Arr::get($this->data, $field->relativePath()));
+                Arr::set($this->data, $field->relativePath(), $submitted);
 
                 if ($field->field->secret && ($submitted === null || $submitted === '')) {
                     continue;
@@ -173,6 +167,63 @@ class SettingsGroupForm extends Component
         }
 
         session()->flash('status', __('settings::settings.saved'));
+    }
+
+    public function addRow(string $path): void
+    {
+        $field = $this->collectionField($path);
+        $rows = $field->normalize(Arr::get($this->data, $path));
+        if ($field->maxItems !== null && count($rows) >= $field->maxItems) {
+            return;
+        }
+        $row = '';
+        if ($field->type === 'repeater') {
+            $row = [];
+            foreach ($field->schema as $child) {
+                $row[$child->key] = $child->default;
+            }
+        }
+        $rows[] = $row;
+        Arr::set($this->data, $path, $rows);
+        $this->resetValidation();
+    }
+
+    public function removeRow(string $path, int $index): void
+    {
+        $field = $this->collectionField($path);
+        $rows = $field->normalize(Arr::get($this->data, $path));
+        if (! array_key_exists($index, $rows) || count($rows) <= ($field->minItems ?? 0)) {
+            return;
+        }
+        array_splice($rows, $index, 1);
+        Arr::set($this->data, $path, array_values($rows));
+        $this->resetValidation();
+    }
+
+    public function moveRow(string $path, int $from, int $to): void
+    {
+        $field = $this->collectionField($path);
+        $rows = $field->normalize(Arr::get($this->data, $path));
+        if (! array_key_exists($from, $rows) || ! array_key_exists($to, $rows)) {
+            return;
+        }
+        $row = array_splice($rows, $from, 1);
+        array_splice($rows, $to, 0, $row);
+        Arr::set($this->data, $path, array_values($rows));
+        $this->resetValidation();
+    }
+
+    private function collectionField(string $path): Field
+    {
+        abort_unless($this->canManage(), 403);
+        foreach ($this->fieldsInOrder() as $resolved) {
+            if ($resolved->relativePath() === $path && $resolved->field->isCollection()) {
+                abort_if($resolved->field->readonly || $resolved->field->hidden, 403);
+
+                return $resolved->field;
+            }
+        }
+        abort(404);
     }
 
     public function revealSecret(string $path): void
